@@ -6,37 +6,33 @@ import android.view.LayoutInflater
 import android.view.ViewGroup
 import android.widget.LinearLayout
 import androidx.annotation.MenuRes
-import androidx.annotation.StringRes
 import androidx.appcompat.widget.Toolbar
 import androidx.core.content.ContextCompat
 import com.zemoga.components.R
-import com.zemoga.components.databinding.CustomToolbarBinding
+import com.zemoga.components.databinding.AppToolbarBinding
 
-class CustomToolbar @JvmOverloads constructor(
+class AppToolbar @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
-    defStyleAttr: Int = 0
-) : LinearLayout(context, attrs, defStyleAttr) {
+) : LinearLayout(context, attrs) {
 
     val toolbar: Toolbar
-    var toolbarMenuId = -1
+    private var toolbarMenuId = -1
 
-    private val binding: CustomToolbarBinding
-    private var isDarkTheme: Boolean = false
     private val padding = resources.getDimensionPixelSize(R.dimen.spacing_normal_600)
 
     init {
         val layoutParams =
             MarginLayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT)
         setLayoutParams(layoutParams)
-        binding = CustomToolbarBinding.inflate(LayoutInflater.from(context), this, true)
 
+        val binding = AppToolbarBinding.inflate(LayoutInflater.from(context), this, true)
         toolbar = binding.toolbarCustom
 
         setBackgroundResource(R.color.white)
 
-        val attributes = context.obtainStyledAttributes(attrs, R.styleable.CustomToolbar)
-        val showBackButton = attributes.getBoolean(R.styleable.CustomToolbar_showBackButton, false)
+        val attributes = context.obtainStyledAttributes(attrs, R.styleable.AppToolbar)
+        val showBackButton = attributes.getBoolean(R.styleable.AppToolbar_showBackButton, false)
         setBackButton(showBackButton)
 
         styleToolbarWithLightTheme()
@@ -57,11 +53,13 @@ class CustomToolbar @JvmOverloads constructor(
         toolbar.menu.clear()
         toolbar.inflateMenu(menuId)
         toolbarMenuId = menuId
+
         setPaddingForToolbar()
     }
 
     fun setTitle(title: String?) {
         setPaddingForToolbar()
+
         toolbar.title = title.orEmpty()
     }
 
@@ -70,23 +68,26 @@ class CustomToolbar @JvmOverloads constructor(
     }
 
     fun styleToolbarWithLightTheme() {
-        isDarkTheme = false
         setPaddingForToolbar()
         setBackgroundResource(R.color.white)
-        toolbar.setTitleTextAppearance(context, R.style.CustomToolbarTitleTextAppearance_Dark)
+
+        toolbar.setTitleTextAppearance(context, R.style.AppToolbarTitleTextAppearance_Dark)
         toolbar.navigationIcon?.setTint(ContextCompat.getColor(context, R.color.blue_dark))
+
         invalidate()
         requestLayout()
     }
 
     fun setBackButton(show: Boolean) {
         setPaddingForToolbar()
+
         toolbar.navigationIcon =
             if (show) ContextCompat.getDrawable(context, R.drawable.ic_arrow_back) else null
+
         toolbar.navigationIcon?.setTint(
             ContextCompat.getColor(
                 context,
-                if (isDarkTheme) android.R.color.white else R.color.blue_dark
+                R.color.blue_dark
             )
         )
     }

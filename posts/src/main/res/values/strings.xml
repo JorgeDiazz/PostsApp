@@ -11,6 +11,9 @@
     <string name="post_id">Post ID: %s</string>
     <string name="comments">Comments</string>
 
+    <string name="loading_resources_from_local_database">Loading resources from local database...</string>
+
+    <string name="error_occurred_getting_posts">An error has occurred when getting posts!</string>
     <string name="error_occurred_updating_post">An error has occurred when updating post!</string>
     <string name="error_occurred_deleting_post"> An error has occurred when deleting post!</string>
     <string name="error_occurred_deleting_non_favorite_posts">An error has occurred when deleting non-favorite posts!</string>

@@ -61,11 +61,11 @@
         <item name="fontFamily">@font/montserrat_semibold</item>
     </style>
 
-    <style name="CustomToolbarTitleTextAppearance" parent="ToolbarTitleTextAppearance.SemiBold">
+    <style name="AppToolbarTitleTextAppearance" parent="ToolbarTitleTextAppearance.SemiBold">
         <item name="android:textColor">@color/white</item>
     </style>
 
-    <style name="CustomToolbarTitleTextAppearance.Dark">
+    <style name="AppToolbarTitleTextAppearance.Dark">
         <item name="android:textColor">@color/blue_dark</item>
     </style>
 

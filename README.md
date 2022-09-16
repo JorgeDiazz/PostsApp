@@ -19,7 +19,7 @@ Furthermore, some libraries and frameworks such as:
 * _Paging3_ for local & remote data pagination.
 * _RemoteMediator_ for pagination orchestration.
 * _Coroutines_ and _Flow_ for Reactive Functional Programming.
-* _LiveData_ for observing and updating data.
+* _StateFlow_ and _SharedFlow_ for observing and updating data.
 * _ViewBinding_ for activities and fragments.
 * _Timber_ for logging purposes.
 * Android Studio _EditorConfig_ file to maintain consistent coding styles.
@@ -29,8 +29,6 @@ Furthermore, some libraries and frameworks such as:
 * _JaCoCo_ maven plugin to generate test coverage reports.
 * _ktlint_ for static code analysis.
 * _LeakCanary_ for memory leaks detection.
-* _Github_ workflows for automated PR actions and Firebase app distribution.
-* _Azure DevOps Pipelines_ workflows for automated PR actions.
 * _dokka_ for Kotlin's documentation generation.
 
 To summarize, every technology mentioned above was included in this project in order to meet the following requirements:
@@ -46,6 +44,7 @@ To summarize, every technology mentioned above was included in this project in o
 9. Delete a post and mark a post as favorite in post details screen.
 10. Show up post, author, and comments data in post details screen.
 11. App is able to work offline, loading both posts lists and posts details from local database.
+12. Supporting landscape mode without losing screens' state.
 
 ## Installation
 
@@ -75,8 +74,6 @@ And these ones for production purposes:
 - productionInternalRelease
 - productionExternalDebug
 - productionExternalRelease
-
-**_Sidenote:_** choose productionExternalDebug before executing the app
 
 ## Debug app signing
 

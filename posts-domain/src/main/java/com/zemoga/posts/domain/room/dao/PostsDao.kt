@@ -21,7 +21,7 @@ interface PostsDao {
     fun getAllPosts(): PagingSource<Int, Post>
 
     @Query("UPDATE post SET favorite = :favorite WHERE id = :id")
-    fun updateFavoritePost(id: Int, favorite: Boolean): Int
+    suspend fun updateFavoritePost(id: Int, favorite: Boolean): Int
 
     @Query("DELETE FROM post WHERE id = :id")
     suspend fun deletePost(id: Int): Int

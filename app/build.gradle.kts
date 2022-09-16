@@ -160,7 +160,6 @@ dependencies {
 
   implementation(Libraries.lifeCycleExtensions)
   implementation(Libraries.lifeCycleRuntime)
-  implementation(Libraries.lifeCycleLiveData)
   implementation(Libraries.lifeCycleProcess)
   implementation(Libraries.lifeCycleViewModel)
   implementation(Libraries.lifeCycleViewModelKtx)

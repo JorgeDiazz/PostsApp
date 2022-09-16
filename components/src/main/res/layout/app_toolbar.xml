@@ -11,5 +11,5 @@
         app:contentInsetStartWithNavigation="0dp"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintTop_toTopOf="parent"
-        app:subtitleTextAppearance="@style/CustomToolbarTitleTextAppearance" />
+        app:subtitleTextAppearance="@style/AppToolbarTitleTextAppearance" />
 </layout>

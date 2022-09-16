@@ -11,10 +11,8 @@ import com.app.core.network.BaseApiResponse
 import com.zemoga.posts.domain.data.Post
 import com.zemoga.posts.domain.data.PostsDatabase
 import com.zemoga.posts.domain.services.PostsRemoteDataSource
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOn
 import javax.inject.Inject
 
 /**
@@ -41,7 +39,7 @@ class PostsRepository @Inject constructor(
         return flow {
             val updatedRows = postsDatabase.getPostsDao().deletePost(postId)
             emit(updatedRows > 0)
-        }.flowOn(Dispatchers.IO)
+        }
     }
 
     override fun deleteNonFavoritePosts(): Flow<Boolean> {
@@ -50,13 +48,13 @@ class PostsRepository @Inject constructor(
 
             val updatedRows = postsDatabase.getPostsDao().deleteNonFavoritePosts()
             emit(updatedRows >= 0)
-        }.flowOn(Dispatchers.IO)
+        }
     }
 
     override fun updateFavoritePost(postId: Int, favorite: Boolean): Flow<Boolean> {
         return flow {
             val updatedRows = postsDatabase.getPostsDao().updateFavoritePost(postId, favorite)
             emit(updatedRows > 0)
-        }.flowOn(Dispatchers.IO)
+        }
     }
 }

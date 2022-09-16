@@ -29,6 +29,7 @@ class ServerInterceptor @Inject constructor(private val logger: Logger) : Interc
           responseBody = JSONObject(response.body?.string().orEmpty())
           val code = responseBody.optString("code")
           val message = responseBody.optString("message")
+
           ServerException(code, message, httpCode)
         } catch (e: Exception) {
           ServerException("UNKNOWN", "GENERIC ERROR", httpCode, "$request $response")

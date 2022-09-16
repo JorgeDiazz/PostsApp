@@ -1,7 +1,5 @@
 package com.zemoga.posts.viewmodels
 
-import androidx.lifecycle.LiveData
-import androidx.lifecycle.MutableLiveData
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.paging.ExperimentalPagingApi
@@ -9,7 +7,7 @@ import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import androidx.paging.map
 import com.app.base.interfaces.FlowUseCase
-import com.app.core.Event
+import com.app.core.interfaces.AppResources
 import com.zemoga.author.domain.data.Author
 import com.zemoga.author.domain.data.AuthorsState
 import com.zemoga.author.qualifiers.GetAuthors
@@ -21,6 +19,7 @@ import com.zemoga.comments.domain.data.Comment
 import com.zemoga.comments.domain.data.CommentsState
 import com.zemoga.comments.qualifiers.GetComments
 import com.zemoga.comments.view.uimodel.CommentUiModel
+import com.zemoga.posts.R
 import com.zemoga.posts.domain.data.Post
 import com.zemoga.posts.domain.data.PostsState
 import com.zemoga.posts.qualifiers.DeleteNonFavoritePosts
@@ -29,9 +28,8 @@ import com.zemoga.posts.qualifiers.GetPosts
 import com.zemoga.posts.qualifiers.UpdateFavoritePost
 import com.zemoga.posts.view.uimodel.PostUiModel
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.collectLatest
-import kotlinx.coroutines.flow.combine
-import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.*
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -42,6 +40,7 @@ import javax.inject.Inject
 @HiltViewModel
 @ExperimentalPagingApi
 class PostsViewModel @Inject constructor(
+    private val resources: AppResources,
     @GetPosts private val getPostsUseCase: FlowUseCase<Unit, PagingData<Post>>,
     @DeletePost private val deletePostUseCase: FlowUseCase<Int, Boolean>,
     @DeleteNonFavoritePosts private val deleteNonFavoritePostsUseCase: FlowUseCase<Unit, Boolean>,
@@ -50,11 +49,11 @@ class PostsViewModel @Inject constructor(
     @GetComments private val getCommentsUseCase: FlowUseCase<Unit, CommentsState>,
 ) : ViewModel() {
 
-    private val _liveData: MutableLiveData<PagingData<PostUiModel>> = MutableLiveData()
-    val liveData: LiveData<PagingData<PostUiModel>> = _liveData
+    private val _postsPagingStateFlow = MutableStateFlow<PagingData<PostUiModel>>(PagingData.empty())
+    val postsPagingStateFlow: StateFlow<PagingData<PostUiModel>> = _postsPagingStateFlow
 
-    private val _news = MutableLiveData<Event<PostsState>>()
-    val news: LiveData<Event<PostsState>> = _news
+    private val _newsSharedFlow = MutableSharedFlow<PostsState>()
+    val newsSharedFlow: SharedFlow<PostsState> = _newsSharedFlow
 
     fun onViewActive() {
         loadPosts()
@@ -62,38 +61,39 @@ class PostsViewModel @Inject constructor(
 
     fun deletePost(postId: Int) = viewModelScope.launch {
         deletePostUseCase.execute(postId)
+            .flowOn(Dispatchers.IO)
             .collect { deleted ->
                 if (deleted) {
-                    _news.value = Event(PostsState.PostDeletedSuccessfully(postId))
+                    _newsSharedFlow.emit(PostsState.PostDeletedSuccessfully(postId))
                 } else {
-                    _news.value = Event(PostsState.ErrorDeletingPost)
+                    _newsSharedFlow.emit(PostsState.ErrorState(resources.getString(R.string.error_occurred_deleting_post)))
                 }
             }
     }
 
     fun deleteNonFavoritePosts() = viewModelScope.launch {
         deleteNonFavoritePostsUseCase.execute(Unit)
+            .flowOn(Dispatchers.IO)
             .collect { deleted ->
                 if (deleted) {
-                    _news.value = Event(PostsState.NonFavoritePostsDeletedSuccessfully)
+                    _newsSharedFlow.emit(PostsState.NonFavoritePostsDeletedSuccessfully)
                 } else {
-                    _news.value = Event(PostsState.ErrorDeletingNonFavoritePosts)
+                    _newsSharedFlow.emit(PostsState.ErrorState(resources.getString(R.string.error_occurred_deleting_non_favorite_posts)))
                 }
             }
     }
-
 
     fun updateFavoritePost(postId: Int, favorite: Boolean) = viewModelScope.launch {
         updateFavoritePostUseCase.execute(postId to favorite)
+            .flowOn(Dispatchers.IO)
             .collect { updated ->
                 if (updated) {
-                    _news.value = Event(PostsState.PostUpdatedSuccessfully(postId))
+                    _newsSharedFlow.emit(PostsState.PostUpdatedSuccessfully(postId))
                 } else {
-                    _news.value = Event(PostsState.ErrorUpdatingPost)
+                    _newsSharedFlow.emit(PostsState.ErrorState(resources.getString(R.string.error_occurred_updating_post)))
                 }
             }
     }
-
 
     private fun loadPosts() = viewModelScope.launch {
         combine(
@@ -103,6 +103,7 @@ class PostsViewModel @Inject constructor(
         ) { postPagingData: PagingData<Post>, authorsState: AuthorsState, commentsState: CommentsState ->
             Triple(postPagingData, authorsState, commentsState)
         }
+            .flowOn(Dispatchers.IO)
             .collectLatest {
                 val (postPagingData, authorsState, commentsState) = it
 
@@ -110,22 +111,24 @@ class PostsViewModel @Inject constructor(
                     val authors = authorsState.authorsList
                     val comments = commentsState.commentsList
 
-                    _liveData.value = postPagingData.map { post ->
-                        post.toUiModel(
-                            author = authors.first { author -> author.id == post.userId }.toUiModel(),
-                            comments = comments.filter { comment -> comment.postId == post.id }.toUiModel()
-                        )
-                    }
+                    _postsPagingStateFlow.value = postPagingData.toUiModel(authors, comments)
                 } else {
-                    _news.value = Event(PostsState.ErrorUpdatingPost)
+                    _newsSharedFlow.emit(PostsState.ErrorState(resources.getString(R.string.error_occurred_getting_posts)))
                 }
             }
     }
 
-    private fun Post.toUiModel(author: AuthorUiModel, comments: List<CommentUiModel>): PostUiModel =
+    private fun PagingData<Post>.toUiModel(authors: List<Author>, comments: List<Comment>): PagingData<PostUiModel> = map { post ->
+        post.toUiModel(
+            authorUiModel = authors.first { author -> author.id == post.userId }.toUiModel(),
+            commentsUiModel = comments.filter { comment -> comment.postId == post.id }.toUiModel()
+        )
+    }
+
+    private fun Post.toUiModel(authorUiModel: AuthorUiModel, commentsUiModel: List<CommentUiModel>): PostUiModel =
         PostUiModel(
             id, userId, title, body, menuVisible = false, favorite = favorite,
-            deleted = false, authorUiModel = author, commentsUiModel = comments,
+            deleted = false, authorUiModel = authorUiModel, commentsUiModel = commentsUiModel,
         )
 
     private fun Author.toUiModel(): AuthorUiModel = AuthorUiModel(
@@ -144,6 +147,4 @@ class PostsViewModel @Inject constructor(
 
     private fun List<Comment>.toUiModel(): List<CommentUiModel> = map { it.toUiModel() }
     private fun Comment.toUiModel(): CommentUiModel = CommentUiModel(postId, id, name, email, body)
-
 }
-

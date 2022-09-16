@@ -8,10 +8,8 @@ import com.zemoga.comments.domain.data.CommentsDatabase
 import com.zemoga.comments.domain.data.CommentsState
 import com.zemoga.comments.domain.data.toBaseModel
 import com.zemoga.comments.domain.services.CommentsRemoteDataSource
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.flowOn
 import kotlinx.serialization.ExperimentalSerializationApi
 import javax.inject.Inject
 
@@ -48,6 +46,6 @@ class CommentsRepository @Inject constructor(
             } else {
                 emit(CommentsState.GettingCommentsSuccessfully(localCommentsList))
             }
-        }.flowOn(Dispatchers.IO)
+        }
     }
 }

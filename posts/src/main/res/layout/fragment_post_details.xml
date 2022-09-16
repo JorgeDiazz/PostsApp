@@ -6,7 +6,7 @@
     android:fitsSystemWindows="true"
     app:layout_behavior="@string/appbar_scrolling_view_behavior">
 
-    <com.zemoga.components.views.CustomToolbar
+    <com.zemoga.components.views.AppToolbar
         android:id="@+id/toolbar_post_details"
         android:layout_width="0dp"
         android:layout_height="wrap_content"

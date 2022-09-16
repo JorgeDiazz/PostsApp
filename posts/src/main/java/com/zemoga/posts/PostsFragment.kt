@@ -8,9 +8,13 @@ import android.widget.Toast
 import androidx.core.content.ContextCompat
 import androidx.fragment.app.Fragment
 import androidx.fragment.app.viewModels
+import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.navigation.fragment.findNavController
+import androidx.paging.CombinedLoadStates
 import androidx.paging.ExperimentalPagingApi
+import androidx.paging.LoadState
 import androidx.paging.PagingData
 import androidx.recyclerview.widget.DividerItemDecoration
 import androidx.recyclerview.widget.ItemTouchHelper
@@ -21,7 +25,7 @@ import com.app.base.None
 import com.app.base.interfaces.Cache
 import com.app.base.interfaces.Logger
 import com.app.base.others.READ_POSTS_FROM_REMOTE_KEY
-import com.app.core.EventObserver
+import com.google.android.material.snackbar.Snackbar
 import com.zemoga.components.utils.viewBinding
 import com.zemoga.posts.databinding.FragmentPostsBinding
 import com.zemoga.posts.domain.data.PostsState
@@ -30,6 +34,7 @@ import com.zemoga.posts.view.PostsAdapter
 import com.zemoga.posts.view.uimodel.PostUiModel
 import com.zemoga.posts.viewmodels.PostsViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 import javax.inject.Inject
 
@@ -62,7 +67,7 @@ class PostsFragment : Fragment(R.layout.fragment_posts), PostsAdapter.OnClickLis
         initializeView()
         initializeViewModel()
         initializeObserver()
-        initializeSubscription()
+        initializeNewsSubscription()
     }
 
     private fun initializeView() {
@@ -71,7 +76,19 @@ class PostsFragment : Fragment(R.layout.fragment_posts), PostsAdapter.OnClickLis
     }
 
     private fun setUpRecyclerView() {
-        postsAdapter = PostsAdapter(resources, this)
+        postsAdapter = PostsAdapter(resources, this).apply {
+            addLoadStateListener { loadState ->
+                val mediatorLoadState: LoadState? = loadState.mediator?.refresh
+
+                if (mediatorLoadState is LoadState.NotLoading) {
+                    swipeRefreshLayout.isRefreshing = false
+                } else if (mediatorLoadState is LoadState.Error) {
+                    Toast.makeText(requireContext(), getString(R.string.loading_resources_from_local_database), Toast.LENGTH_SHORT).show()
+                    swipeRefreshLayout.isRefreshing = false
+                }
+
+            }
+        }
 
         postsRecyclerView = binding.recyclerView
         postsRecyclerView.apply {
@@ -84,7 +101,6 @@ class PostsFragment : Fragment(R.layout.fragment_posts), PostsAdapter.OnClickLis
 
         swipeRefreshLayout.setOnRefreshListener {
             cache.saveBoolean(READ_POSTS_FROM_REMOTE_KEY, true)
-            swipeRefreshLayout.isRefreshing = false
 
             postsAdapter.refresh()
         }
@@ -145,32 +161,40 @@ class PostsFragment : Fragment(R.layout.fragment_posts), PostsAdapter.OnClickLis
     }
 
     private fun initializeObserver() {
-        viewModel.liveData.observe(viewLifecycleOwner) { observeData(it) }
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.postsPagingStateFlow.collect { postsPagingData ->
+                    observePostsPagingData(postsPagingData)
+                }
+            }
+        }
     }
 
-    private fun observeData(postsPagingData: PagingData<PostUiModel>) {
-        lifecycleScope.launch {
+    private fun observePostsPagingData(postsPagingData: PagingData<PostUiModel>) {
+        lifecycleScope.launchWhenStarted {
             postsAdapter.submitData(postsPagingData)
         }
     }
 
-    private fun initializeSubscription() {
-        viewModel.news.observe(
-            viewLifecycleOwner,
-            EventObserver {
-                handleNews(it)
+    private fun initializeNewsSubscription() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                viewModel.newsSharedFlow.collectLatest { postsStateNews ->
+                    handleNews(postsStateNews)
+                }
             }
-        )
+        }
     }
 
     private fun handleNews(news: PostsState) {
         when (news) {
             is PostsState.PostUpdatedSuccessfully -> logger.d("Post ${news.postId} was updated successfully")
-            is PostsState.ErrorUpdatingPost -> showUpErrorMessage(getString(R.string.error_occurred_updating_post))
             is PostsState.PostDeletedSuccessfully -> postsAdapter.deletePost(news.postId)
-            is PostsState.ErrorDeletingPost -> showUpErrorMessage(getString(R.string.error_occurred_deleting_post))
             is PostsState.NonFavoritePostsDeletedSuccessfully -> Toast.makeText(requireContext(), getString(R.string.non_favorite_posts_deleted), Toast.LENGTH_SHORT).show()
-            is PostsState.ErrorDeletingNonFavoritePosts -> showUpErrorMessage(getString(R.string.error_occurred_deleting_non_favorite_posts))
+            is PostsState.ErrorState -> {
+                Snackbar.make(requireView(), news.errorMessage, Snackbar.LENGTH_SHORT).show()
+                logger.e(news.errorMessage)
+            }
             else -> None
         }
     }
@@ -190,10 +214,5 @@ class PostsFragment : Fragment(R.layout.fragment_posts), PostsAdapter.OnClickLis
 
     override fun onDeleteClick(postUiModel: PostUiModel) {
         viewModel.deletePost(postUiModel.id)
-    }
-
-    private fun showUpErrorMessage(message: String) {
-        Toast.makeText(requireContext(), message, Toast.LENGTH_SHORT).show()
-        logger.e(message)
     }
 }

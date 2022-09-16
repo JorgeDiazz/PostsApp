@@ -6,6 +6,7 @@ import android.view.MenuInflater
 import android.view.MenuItem
 import android.view.View
 import android.widget.ArrayAdapter
+import android.widget.Toast
 import android.widget.ToggleButton
 import androidx.appcompat.app.AppCompatActivity
 import androidx.core.view.MenuHost
@@ -13,10 +14,11 @@ import androidx.core.view.MenuProvider
 import androidx.fragment.app.DialogFragment
 import androidx.fragment.app.viewModels
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.repeatOnLifecycle
 import androidx.paging.ExperimentalPagingApi
 import com.app.base.None
 import com.app.base.interfaces.Logger
-import com.app.core.EventObserver
 import com.zemoga.authors.view.uimodel.AuthorUiModel
 import com.zemoga.comments.view.uimodel.CommentUiModel
 import com.zemoga.components.utils.viewBinding
@@ -25,6 +27,8 @@ import com.zemoga.posts.domain.data.PostsState
 import com.zemoga.posts.view.uimodel.PostUiModel
 import com.zemoga.posts.viewmodels.PostsViewModel
 import dagger.hilt.android.AndroidEntryPoint
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 import javax.inject.Inject
 
 /**
@@ -54,7 +58,7 @@ class PostDetailsFragment : DialogFragment(R.layout.fragment_post_details), Menu
         super.onViewCreated(view, savedInstanceState)
 
         initializeView()
-        initializePostsSubscription()
+        initializeNewsSubscription()
     }
 
     private fun initializeView() {
@@ -168,18 +172,23 @@ class PostDetailsFragment : DialogFragment(R.layout.fragment_post_details), Menu
 
     override fun onMenuItemSelected(menuItem: MenuItem): Boolean = true
 
-    private fun initializePostsSubscription() {
-        postsViewModel.news.observe(
-            viewLifecycleOwner,
-            EventObserver {
-                handleNews(it)
+    private fun initializeNewsSubscription() {
+        lifecycleScope.launch {
+            repeatOnLifecycle(Lifecycle.State.STARTED) {
+                postsViewModel.newsSharedFlow.collectLatest { postsStateNews ->
+                    handleNews(postsStateNews)
+                }
             }
-        )
+        }
     }
 
     private fun handleNews(news: PostsState) {
         when (news) {
             is PostsState.PostDeletedSuccessfully -> popFragment()
+            is PostsState.ErrorState -> {
+                Toast.makeText(requireContext(), news.errorMessage, Toast.LENGTH_SHORT).show()
+                logger.e(news.errorMessage)
+            }
             else -> None
         }
     }
