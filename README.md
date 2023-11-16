@@ -1,6 +1,7 @@
-<img src="https://marketing.zemoga.com/hubfs/zemoga-logo.svg" alt="Zemoga"  width="300" height="80"/>
+# Overview: PostsApp (Android app)
 
-# Welcome to Android Zemoga Tech Test!
+Welcome to TheMovie, an Android application that utilizes the [JSONPlaceholder Database](https://jsonplaceholder.typicode.com) to retrieve posts and their comments, providing a social media app-like experience. 
+
 
 ## What's included
 
